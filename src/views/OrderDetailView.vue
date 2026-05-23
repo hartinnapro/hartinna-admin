@@ -85,7 +85,7 @@
           <!-- Admin notes -->
           <div class="card section-card">
             <div class="section-title">Admin Notes</div>
-            <textarea v-model="adminNotes" placeholder="Internal notes (not visible to member)…" rows="3"></textarea>
+            <textarea id="admin-notes" name="adminNotes" v-model="adminNotes" placeholder="Internal notes (not visible to member)…" rows="3"></textarea>
             <button class="btn btn-outline btn-sm" style="margin-top:8px;" @click="saveNotes" :disabled="savingNotes">
               {{ savingNotes ? 'Saving…' : 'Save Notes' }}
             </button>
@@ -180,7 +180,7 @@
         <div class="modal-body">
           <div class="form-group">
             <label>Reason for cancellation</label>
-            <textarea v-model="cancelReason" placeholder="e.g. Payment proof invalid, insufficient stock…" rows="3"></textarea>
+            <textarea id="cancel-reason" name="cancelReason" v-model="cancelReason" placeholder="e.g. Payment proof invalid, insufficient stock…" rows="3"></textarea>
           </div>
         </div>
         <div class="modal-footer">

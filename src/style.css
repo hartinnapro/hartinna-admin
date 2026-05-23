@@ -1,20 +1,20 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --sidebar-w:    240px;
+  --sidebar-w:    170px;
   --topbar-h:     56px;
-  --primary:      #A85B6A;
-  --primary-light:#F5E6E9;
-  --primary-dark: #8E4A58;
+  --primary:      #D4276C;
+  --primary-light:#FCE4EF;
+  --primary-dark: #B81F5A;
   --accent:       #C9956A;
-  --sidebar-bg:   #1C1209;
+  --sidebar-bg:   #1A1A2E;
   --sidebar-text: rgba(255,255,255,0.75);
-  --sidebar-active: rgba(168,91,106,0.25);
-  --bg:           #F5F0EB;
+  --sidebar-active: rgba(212,39,108,0.25);
+  --bg:           #FDF0F5;
   --card:         #FFFFFF;
   --text:         #2C1810;
   --text-muted:   #9A7B77;
-  --border:       #E8D8D4;
+  --border:       #F0D6E4;
   --success:      #2E7D52;
   --success-bg:   #EEF7F2;
   --warning:      #7A5510;
@@ -119,7 +119,7 @@ input, select, textarea {
 }
 input:focus, select:focus, textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(168,91,106,0.1);
+  box-shadow: 0 0 0 3px rgba(212,39,108,0.1);
 }
 input::placeholder, textarea::placeholder { color: #C5ABA8; }
 textarea { resize: vertical; min-height: 80px; }

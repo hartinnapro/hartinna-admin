@@ -28,6 +28,11 @@
           <div class="card section-card">
             <div class="section-title">Account Info</div>
             <div class="info-row"><span class="info-label">Full Name</span><span class="info-value">{{ member.full_name }}</span></div>
+            <div class="info-row"><span class="info-label">Username</span><span class="info-value">{{ member.username || '—' }}</span></div>
+            <div class="info-row"><span class="info-label">Email</span><span class="info-value">
+              <span v-if="member.email && !member.email.endsWith('@hartinna.internal')">{{ member.email }}</span>
+              <span v-else style="color:var(--text-muted);">No email (username login)</span>
+            </span></div>
             <div class="info-row"><span class="info-label">Phone</span><span class="info-value">{{ member.phone }}</span></div>
             <div class="info-row"><span class="info-label">Region</span><span class="info-value">{{ member.region }}</span></div>
             <div class="info-row"><span class="info-label">Level</span><span class="info-value"><span class="badge-level">{{ levelLabel(member.level) }}</span></span></div>
@@ -42,7 +47,7 @@
             <div class="form-group">
               <label>Member Level</label>
               <div class="select-wrap">
-                <select v-model="newLevel">
+                <select id="member-level" name="level" v-model="newLevel">
                   <option value="store_manager">Store Manager</option>
                   <option value="director">Director</option>
                   <option value="ceo">CEO</option>
@@ -137,7 +142,13 @@ onMounted(async () => {
     .eq('id', route.params.id)
     .single()
 
-  if (m) { member.value = m; newLevel.value = m.level }
+  if (m) {
+    // Fetch email via RPC
+    const { data: allMembers } = await supabase.rpc('get_members_with_email', {})
+    const withEmail = allMembers?.find(r => r.id === m.id)
+    member.value = { ...m, email: withEmail?.email || null }
+    newLevel.value = m.level
+  }
 
   const { data: o } = await supabase
     .from('orders')

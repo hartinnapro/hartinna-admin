@@ -19,6 +19,7 @@ const routes = [
       { path: 'members/:id',      component: () => import('../views/MemberDetailView.vue') },
       { path: 'products',         component: () => import('../views/ProductsView.vue') },
       { path: 'inventory',        component: () => import('../views/InventoryView.vue') },
+      { path: 'support',          component: () => import('../views/SupportView.vue') },
     ]
   }
 ]

@@ -77,15 +77,15 @@
           <div class="alert alert-error" v-if="stockError">{{ stockError }}</div>
           <div class="form-group">
             <label>Quantity Received *</label>
-            <input v-model.number="stockForm.qty" type="number" min="1" placeholder="0" />
+            <input id="stock-qty" name="qty" v-model.number="stockForm.qty" type="number" min="1" placeholder="0" />
           </div>
           <div class="form-group">
             <label>Unit Cost Price (MYR)</label>
-            <input v-model.number="stockForm.cost" type="number" min="0" step="0.01" placeholder="0.00" />
+            <input id="stock-cost" name="cost" v-model.number="stockForm.cost" type="number" min="0" step="0.01" placeholder="0.00" />
           </div>
           <div class="form-group">
             <label>Notes</label>
-            <input v-model="stockForm.notes" placeholder="e.g. Batch #001, Supplier X" />
+            <input id="stock-notes" name="notes" v-model="stockForm.notes" placeholder="e.g. Batch #001, Supplier X" />
           </div>
         </div>
         <div class="modal-footer">

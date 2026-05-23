@@ -19,7 +19,7 @@
         <span class="tab-count" v-if="tab.count !== undefined">{{ tab.count }}</span>
       </button>
       <div class="filter-spacer"></div>
-      <input v-model="search" type="text" placeholder="Search order no. or member…" class="search-input" />
+      <input id="orders-search" name="search" v-model="search" type="text" placeholder="Search order no. or member…" class="search-input" />
     </div>
 
     <!-- Table -->
@@ -311,7 +311,7 @@ onMounted(fetchOrders)
 }
 .filter-tab:hover  { border-color: var(--primary); color: var(--primary); }
 .filter-tab.active { background: var(--primary); border-color: var(--primary); color: white; }
-.filter-tab.active .tab-count { background: rgba(255,255,255,0.25); }
+.filter-tab.active .tab-count { background: white; color: var(--primary); }
 
 .tab-count {
   background: var(--primary-light); color: var(--primary);

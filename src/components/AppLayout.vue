@@ -3,10 +3,11 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <div class="brand-mark">H</div>
-        <div>
-          <div class="brand-name">Hartinna</div>
-          <div class="brand-sub">Admin Console</div>
+        <div class="brand-mark">
+          <img src="/hartinna_logo.png" alt="Hartinna Logo" class="brand-logo-img" />
+        </div>
+        <div class="brand-text-wrap">
+          <img src="/hartinna_brand.png" alt="Hartinna Sdn Bhd" class="brand-name-img" />
         </div>
       </div>
 
@@ -32,6 +33,12 @@
         <RouterLink to="/inventory" class="nav-item" :class="{ active: route.path.startsWith('/inventory') }">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
           <span>Inventory</span>
+        </RouterLink>
+
+        <RouterLink to="/support" class="nav-item" :class="{ active: route.path.startsWith('/support') }">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Support</span>
+          <span class="nav-badge" v-if="supportCount > 0">{{ supportCount }}</span>
         </RouterLink>
       </nav>
 
@@ -67,6 +74,7 @@ const router = useRouter()
 const adminName = ref('')
 const adminRole = ref('')
 const pendingCount = ref(0)
+const supportCount = ref(0)
 
 const adminInitial = computed(() => adminName.value ? adminName.value[0].toUpperCase() : 'A')
 
@@ -97,6 +105,13 @@ onMounted(async () => {
     .eq('status', 'pending_review')
 
   pendingCount.value = count || 0
+
+  // Open support tickets badge
+  const { data: supportData } = await supabase
+    .from('support_tickets')
+    .select('id')
+    .eq('status', 'open')
+  supportCount.value = supportData?.length || 0
 })
 </script>
 
@@ -119,32 +134,44 @@ onMounted(async () => {
 
 .sidebar-brand {
   display: flex; align-items: center; gap: 10px;
-  padding: 20px 16px 16px;
+  padding: 14px 12px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .brand-mark {
-  width: 34px; height: 34px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 700; color: white;
+  width: auto; height: 36px;
   flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
 }
 
-.brand-name {
-  font-size: 15px; font-weight: 700;
-  color: white; line-height: 1.2;
+.brand-logo-img {
+  height: 36px; width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 4px rgba(212,39,108,0.35));
+}
+
+.brand-text-wrap {
+  display: flex; flex-direction: column; gap: 0;
+  flex: 1; min-width: 0;
+}
+
+.brand-name-img {
+  height: 28px; width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+  filter: brightness(1.05);
 }
 
 .brand-sub {
-  font-size: 10.5px; color: rgba(255,255,255,0.4);
-  letter-spacing: 0.05em;
+  font-size: 10px; color: rgba(255,255,255,0.35);
+  letter-spacing: 0.07em; text-transform: uppercase;
+  margin-top: 1px;
 }
 
 /* Nav */
 .sidebar-nav {
-  flex: 1; padding: 12px 10px;
+  flex: 1; padding: 12px 0px 12px 10px;
   overflow-y: auto;
 }
 
@@ -158,7 +185,7 @@ onMounted(async () => {
 
 .nav-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 9px 10px;
+  padding: 9px 8px 9px 10px;
   border-radius: var(--radius-sm);
   color: var(--sidebar-text);
   text-decoration: none;

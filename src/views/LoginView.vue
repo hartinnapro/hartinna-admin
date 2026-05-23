@@ -11,12 +11,12 @@
 
       <div class="form-group">
         <label>Email Address</label>
-        <input v-model="email" type="email" placeholder="admin@hartinna.com" @keyup.enter="login" />
+        <input id="admin-email" name="email" v-model="email" type="email" placeholder="admin@hartinna.com" @keyup.enter="login" />
       </div>
 
       <div class="form-group">
         <label>Password</label>
-        <input v-model="password" :type="showPw ? 'text' : 'password'" placeholder="Enter password" @keyup.enter="login" />
+        <input id="admin-password" name="password" v-model="password" :type="showPw ? 'text' : 'password'" placeholder="Enter password" @keyup.enter="login" />
       </div>
 
       <button class="btn btn-primary login-btn" @click="login" :disabled="loading">
@@ -60,7 +60,7 @@ async function login() {
       .from('admins')
       .select('id')
       .eq('id', session.user.id)
-      .single()
+      .maybeSingle()
 
     if (!admin) {
       await supabase.auth.signOut()
@@ -103,7 +103,7 @@ async function login() {
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 22px; font-weight: 700; color: white;
   margin-bottom: 12px;
-  box-shadow: 0 4px 16px rgba(168,91,106,0.35);
+  box-shadow: 0 4px 16px rgba(212,39,108,0.35);
 }
 
 .brand-name { font-size: 20px; font-weight: 700; color: var(--text); }
@@ -115,7 +115,7 @@ async function login() {
   width: 100%; justify-content: center;
   padding: 12px; font-size: 14.5px;
   margin-top: 6px; margin-bottom: 16px;
-  box-shadow: 0 4px 14px rgba(168,91,106,0.3);
+  box-shadow: 0 4px 14px rgba(212,39,108,0.3);
 }
 
 .login-note {

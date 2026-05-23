@@ -8,7 +8,7 @@
     </div>
 
     <div class="filter-bar">
-      <select v-model="filterLevel" class="filter-select">
+      <select id="filter-level" name="filterLevel" v-model="filterLevel" class="filter-select">
         <option value="">All Levels</option>
         <option value="store_manager">Store Manager</option>
         <option value="director">Director</option>
@@ -16,12 +16,12 @@
         <option value="branch">Branch</option>
         <option value="exec_shareholder">Exec. Shareholder</option>
       </select>
-      <select v-model="filterRegion" class="filter-select">
+      <select id="filter-region" name="filterRegion" v-model="filterRegion" class="filter-select">
         <option value="">All Regions</option>
         <option v-for="r in regions" :key="r" :value="r">{{ r }}</option>
       </select>
       <div class="filter-spacer"></div>
-      <input v-model="search" type="text" placeholder="Search name, phone…" class="search-input" />
+      <input id="members-search" name="search" v-model="search" type="text" placeholder="Search name, phone…" class="search-input" />
     </div>
 
     <div class="card table-card">
@@ -37,6 +37,8 @@
         <thead>
           <tr>
             <th>Name</th>
+            <th>Username</th>
+            <th>Email</th>
             <th>Phone</th>
             <th>Level</th>
             <th>Region</th>
@@ -53,6 +55,11 @@
                 Ref: {{ m.referrer.full_name }}
               </div>
             </td>
+            <td style="color:var(--text-muted);">{{ m.username || '—' }}</td>
+            <td style="color:var(--text-muted); font-size:12.5px;">
+              <span v-if="m.email && !m.email.endsWith('@hartinna.internal')">{{ m.email }}</span>
+              <span v-else style="color:var(--border);">—</span>
+            </td>
             <td style="color:var(--text-muted);">{{ m.phone }}</td>
             <td><span class="badge-level">{{ levelLabel(m.level) }}</span></td>
             <td style="color:var(--text-muted);">{{ m.region }}</td>
@@ -63,7 +70,7 @@
               </span>
             </td>
             <td @click.stop>
-              <select class="level-select" :value="m.level" @change="changeLevel(m, $event.target.value)">
+              <select class="level-select" :id="`level-${m.id}`" :name="`level-${m.id}`" :value="m.level" @change="changeLevel(m, $event.target.value)">
                 <option value="store_manager">Store Manager</option>
                 <option value="director">Director</option>
                 <option value="ceo">CEO</option>
@@ -105,7 +112,7 @@ const filtered = computed(() => {
   if (filterRegion.value) r = r.filter(m => m.region === filterRegion.value)
   if (search.value.trim()) {
     const q = search.value.toLowerCase()
-    r = r.filter(m => m.full_name?.toLowerCase().includes(q) || m.phone?.includes(q))
+    r = r.filter(m => m.full_name?.toLowerCase().includes(q) || m.phone?.includes(q) || m.username?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q))
   }
   return r
 })
@@ -119,12 +126,17 @@ async function changeLevel(member, newLevel) {
 }
 
 onMounted(async () => {
-  const { data } = await supabase
-    .from('members')
-    .select('id, full_name, phone, level, region, is_active, created_at, referrer_id, referrer:referrer_id(full_name)')
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-  members.value = data || []
+  const { data, error } = await supabase.rpc('get_members_with_email', {})
+  if (error) console.error('RPC error:', JSON.stringify(error))
+  const rows = (data || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  // Resolve referrer names
+  const referrerIds = [...new Set(rows.filter(m => m.referrer_id).map(m => m.referrer_id))]
+  let referrerMap = {}
+  if (referrerIds.length) {
+    const { data: refs } = await supabase.from('members').select('id, full_name').in('id', referrerIds)
+    if (refs) refs.forEach(r => { referrerMap[r.id] = r.full_name })
+  }
+  members.value = rows.map(m => ({ ...m, referrer: m.referrer_id ? { full_name: referrerMap[m.referrer_id] } : null }))
   loading.value = false
 })
 </script>
