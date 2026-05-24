@@ -13,7 +13,9 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
-        navigateFallbackAllowlist: [/^\/(?!api)/]
+        navigateFallbackAllowlist: [/^\/(?!api)/],
+        skipWaiting: true,
+        clientsClaim: true
       },
       manifest: {
         name: 'Hartinna Console',
