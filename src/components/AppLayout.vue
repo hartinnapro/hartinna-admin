@@ -103,6 +103,7 @@ onMounted(async () => {
 .layout {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ── Sidebar ─────────────────────────────────── */
@@ -226,6 +227,7 @@ onMounted(async () => {
   margin-left: var(--sidebar-w);
   flex: 1;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-y: auto;
 }
 </style>
