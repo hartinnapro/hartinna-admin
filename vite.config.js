@@ -23,7 +23,6 @@ export default defineConfig({
         description: 'Hartinna Partner — Admin Console',
         start_url: '/',
         display: 'standalone',
-        orientation: 'landscape',
         background_color: '#ffffff',
         theme_color: '#D4276C',
         lang: 'en',
