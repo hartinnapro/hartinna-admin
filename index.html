@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#FDF0F5" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#D4276C" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -11,9 +11,28 @@
     <link rel="icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Hartinna Console</title>
+    <style>
+      /* Prevent iOS auto-zoom when focusing form fields with font-size < 16px */
+      input, select, textarea {
+        font-size: 16px;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
+    <script>
+      // Prevent pinch-to-zoom gestures on iOS (where user-scalable=no is ignored)
+      document.addEventListener('gesturestart', e => e.preventDefault())
+      document.addEventListener('gesturechange', e => e.preventDefault())
+      document.addEventListener('gestureend', e => e.preventDefault())
+      // Prevent double-tap zoom
+      let lastTouchEnd = 0
+      document.addEventListener('touchend', e => {
+        const now = Date.now()
+        if (now - lastTouchEnd <= 300) e.preventDefault()
+        lastTouchEnd = now
+      }, { passive: false })
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
