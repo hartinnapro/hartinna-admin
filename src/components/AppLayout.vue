@@ -226,8 +226,8 @@ onMounted(async () => {
 .main-content {
   margin-left: var(--sidebar-w);
   flex: 1;
-  min-height: 100vh;
-  min-height: 100dvh;
-  overflow-y: auto;
+  /* No internal scroll — let the window scroll naturally.
+     This avoids iOS Safari quirks where overflow-y:auto containers
+     preserve scrollTop across rotations and visually shift content. */
 }
 </style>
