@@ -64,37 +64,45 @@ supabase.auth.onAuthStateChange((event) => {
 // ── Connection keep-alive ────────────────────────────────────────────
 // Android/Windows PWAs can lose underlying network sockets during idle
 // or backgrounding, causing subsequent Supabase queries to hang.
-// These handlers keep the connection warm and force a fresh auth +
-// connection cycle when the page returns to view.
+// These handlers keep the connection warm with a lightweight benign
+// query — NOT refreshSession, since that triggers Supabase's auth
+// state machine and any failure (network blip, timeout) would log
+// the user out.
 
 const HEARTBEAT_INTERVAL_MS = 4 * 60 * 1000  // 4 minutes
 
-async function refreshConnection() {
-  if (!state.session) return  // No session, nothing to refresh
+async function pingConnection() {
+  if (!state.session || !state.admin) return
   try {
-    await supabase.auth.refreshSession()
+    // Lightweight no-op query against a row we know exists (own admin row).
+    // Keeps HTTP connection pool warm without touching auth.
+    // Supabase auto-refreshes the access token internally when needed
+    // — we don't manage that ourselves.
+    await supabase
+      .from('admins')
+      .select('id')
+      .eq('id', state.admin.id)
+      .single()
   } catch (e) {
-    // Silent: refresh may legitimately fail (expired refresh token, no network).
-    // Components making subsequent queries will surface their own errors.
-    console.warn('[session] connection refresh failed:', e?.message || e)
+    // Silent: this is just a keep-alive, not critical.
+    console.warn('[session] ping failed:', e?.message || e)
   }
 }
 
-// Heartbeat: every 4 minutes while page is visible, refresh the token.
-// This forces a real HTTP call to Supabase, keeping the connection pool alive.
+// Heartbeat: every 4 minutes while page is visible.
 setInterval(() => {
-  if (!document.hidden) refreshConnection()
+  if (!document.hidden) pingConnection()
 }, HEARTBEAT_INTERVAL_MS)
 
 // Visibility resume: when returning to the tab after being hidden,
-// refresh immediately to recover from any connection death during background.
+// ping immediately to wake the connection.
 let wasHidden = false
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     wasHidden = true
   } else if (wasHidden) {
     wasHidden = false
-    refreshConnection()
+    pingConnection()
   }
 })
 
