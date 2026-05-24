@@ -32,20 +32,35 @@
       }, { passive: false })
 
       // Force viewport recalc + scroll to top on iOS rotation
-      // (iOS Safari has a known bug where rotating leaves content shifted behind status bar)
       function resetViewportAfterRotation() {
-        // Multiple delayed scrolls catch the various timings iOS uses
         setTimeout(() => window.scrollTo(0, 0), 50)
         setTimeout(() => window.scrollTo(0, 0), 200)
         setTimeout(() => window.scrollTo(0, 0), 500)
       }
       window.addEventListener('orientationchange', resetViewportAfterRotation)
-      // Also listen for resize, since some iOS versions fire resize but not orientationchange
       let lastWidth = window.innerWidth
       window.addEventListener('resize', () => {
         if (window.innerWidth !== lastWidth) {
           lastWidth = window.innerWidth
           resetViewportAfterRotation()
+        }
+      })
+
+      // Auto-recover from Android PWA process suspension.
+      // When the PWA returns to foreground after being backgrounded for a while,
+      // force a clean reload to avoid the "pink screen of partial restoration"
+      // that happens when Android partially kills the JS process under memory pressure.
+      let backgroundedAt = null
+      const RELOAD_AFTER_MS = 30000  // 30 seconds away → reload on return
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          backgroundedAt = Date.now()
+        } else if (backgroundedAt) {
+          const awayMs = Date.now() - backgroundedAt
+          backgroundedAt = null
+          if (awayMs > RELOAD_AFTER_MS) {
+            window.location.reload()
+          }
         }
       })
     </script>
