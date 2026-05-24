@@ -20,7 +20,7 @@
   <body>
     <div id="app"></div>
     <script>
-      // ── Zoom prevention ─────────────────────────────────────
+      // Zoom prevention
       document.addEventListener('gesturestart', e => e.preventDefault())
       document.addEventListener('gesturechange', e => e.preventDefault())
       document.addEventListener('gestureend', e => e.preventDefault())
@@ -31,7 +31,7 @@
         lastTouchEnd = now
       }, { passive: false })
 
-      // ── iOS rotation viewport recovery ──────────────────────
+      // iOS rotation viewport recovery
       function resetViewportAfterRotation() {
         setTimeout(() => window.scrollTo(0, 0), 50)
         setTimeout(() => window.scrollTo(0, 0), 200)
@@ -46,39 +46,8 @@
         }
       })
 
-      // ── Auto-reload on long backgrounding ───────────────────
-      // Android PWA process suspension recovery
-      let backgroundedAt = null
-      const RELOAD_AFTER_BACKGROUND_MS = 30000  // 30 seconds
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          backgroundedAt = Date.now()
-        } else if (backgroundedAt) {
-          const awayMs = Date.now() - backgroundedAt
-          backgroundedAt = null
-          if (awayMs > RELOAD_AFTER_BACKGROUND_MS) {
-            window.location.reload()
-          }
-        }
-      })
-
-      // ── Auto-reload on idle-then-interact ───────────────────
-      // After 5 minutes of no interaction, the underlying Supabase connection
-      // can die (Android/Windows network suspension, Chrome JS throttling).
-      // Reload on next interaction to recover.
-      let lastInteraction = Date.now()
-      const RELOAD_AFTER_IDLE_MS = 5 * 60 * 1000  // 5 minutes
-      function onInteraction() {
-        const idleMs = Date.now() - lastInteraction
-        lastInteraction = Date.now()
-        if (idleMs > RELOAD_AFTER_IDLE_MS) {
-          window.location.reload()
-        }
-      }
-      // Capture-phase so we catch interactions before Vue handlers fire
-      ;['click', 'touchstart', 'keydown'].forEach(evt => {
-        document.addEventListener(evt, onInteraction, { capture: true, passive: true })
-      })
+      // (Reload handlers removed — session.js now handles connection recovery
+      //  gracefully via heartbeat + visibility refresh, preserving UI state.)
     </script>
     <script type="module" src="/src/main.js"></script>
   </body>
