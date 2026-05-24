@@ -6,6 +6,13 @@ export function useWakeLock() {
   let videoEl  = null
   let videoUrl = null
 
+  // ── Orientation lock (Android Chrome) ────────────────────────────────────
+  // iOS does not support screen.orientation.lock — manifest orientation field
+  // is the only lever there (already set to 'landscape' in vite.config.js).
+  function lockLandscape() {
+    screen.orientation?.lock?.('landscape').catch(() => {})
+  }
+
   // ── Strategy 1: Screen Wake Lock API ─────────────────────────────────────
   async function acquireWakeLock() {
     if (!('wakeLock' in navigator)) return false
@@ -93,11 +100,15 @@ export function useWakeLock() {
 
   // Wake Lock is auto-released when the tab is hidden; re-acquire on return
   function onVisibilityChange() {
-    if (document.visibilityState === 'visible') acquire()
+    if (document.visibilityState === 'visible') {
+      acquire()
+      lockLandscape()
+    }
   }
 
   onMounted(() => {
     acquire()
+    lockLandscape()
     document.addEventListener('visibilitychange', onVisibilityChange)
   })
 
