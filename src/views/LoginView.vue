@@ -9,20 +9,22 @@
 
       <div class="alert alert-error" v-if="error">{{ error }}</div>
 
-      <div class="form-group">
-        <label>Email Address</label>
-        <input id="admin-email" name="email" v-model="email" type="email" placeholder="admin@hartinna.com" @keyup.enter="login" />
-      </div>
+      <form @submit.prevent="login">
+        <div class="form-group">
+          <label for="admin-email">Email Address</label>
+          <input id="admin-email" name="email" v-model="email" type="email" autocomplete="username" placeholder="admin@hartinna.com" />
+        </div>
 
-      <div class="form-group">
-        <label>Password</label>
-        <input id="admin-password" name="password" v-model="password" :type="showPw ? 'text' : 'password'" placeholder="Enter password" @keyup.enter="login" />
-      </div>
+        <div class="form-group">
+          <label for="admin-password">Password</label>
+          <input id="admin-password" name="password" v-model="password" :type="showPw ? 'text' : 'password'" autocomplete="current-password" placeholder="Enter password" />
+        </div>
 
-      <button class="btn btn-primary login-btn" @click="login" :disabled="loading">
-        <span class="spinner" v-if="loading" style="width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,0.3);border-top-color:white;"></span>
-        {{ loading ? 'Signing in…' : 'Sign In' }}
-      </button>
+        <button class="btn btn-primary login-btn" type="submit" :disabled="loading">
+          <span class="spinner" v-if="loading" style="width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,0.3);border-top-color:white;"></span>
+          {{ loading ? 'Signing in…' : 'Sign In' }}
+        </button>
+      </form>
 
       <div class="login-note">Access restricted to authorized administrators only.</div>
     </div>
