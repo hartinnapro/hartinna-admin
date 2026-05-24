@@ -44,14 +44,21 @@ export function resetSession() {
   loadingPromise = null
 }
 
-// Refresh cache on auth events (login / logout / token refresh)
+// Refresh cache on real auth changes — but ignore initial-load events
+// to avoid racing with the router guard's first loadSession() call.
 supabase.auth.onAuthStateChange((event) => {
+  // Skip boot-up events fired while the first load is still in flight
+  if (!state.ready) return
+
   if (event === 'SIGNED_OUT') {
     resetSession()
-  } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+  } else if (event === 'SIGNED_IN') {
+    // Real login event after a previous sign-out — refresh the admin row
     loadingPromise = null
     loadSession()
   }
+  // TOKEN_REFRESHED is intentionally ignored — the access token changed,
+  // but the admin row hasn't, so no refetch is needed.
 })
 
 export { state as session }
