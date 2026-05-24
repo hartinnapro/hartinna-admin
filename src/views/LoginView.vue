@@ -83,7 +83,7 @@ async function login() {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  background: var(--sidebar-bg);
+  background: var(--bg);
   display: flex; align-items: center; justify-content: center;
   padding: 24px;
 }
