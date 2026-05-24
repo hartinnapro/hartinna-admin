@@ -20,6 +20,7 @@
   <body>
     <div id="app"></div>
     <script>
+      // Prevent pinch-zoom and double-tap zoom
       document.addEventListener('gesturestart', e => e.preventDefault())
       document.addEventListener('gesturechange', e => e.preventDefault())
       document.addEventListener('gestureend', e => e.preventDefault())
@@ -29,6 +30,24 @@
         if (now - lastTouchEnd <= 300) e.preventDefault()
         lastTouchEnd = now
       }, { passive: false })
+
+      // Force viewport recalc + scroll to top on iOS rotation
+      // (iOS Safari has a known bug where rotating leaves content shifted behind status bar)
+      function resetViewportAfterRotation() {
+        // Multiple delayed scrolls catch the various timings iOS uses
+        setTimeout(() => window.scrollTo(0, 0), 50)
+        setTimeout(() => window.scrollTo(0, 0), 200)
+        setTimeout(() => window.scrollTo(0, 0), 500)
+      }
+      window.addEventListener('orientationchange', resetViewportAfterRotation)
+      // Also listen for resize, since some iOS versions fire resize but not orientationchange
+      let lastWidth = window.innerWidth
+      window.addEventListener('resize', () => {
+        if (window.innerWidth !== lastWidth) {
+          lastWidth = window.innerWidth
+          resetViewportAfterRotation()
+        }
+      })
     </script>
     <script type="module" src="/src/main.js"></script>
   </body>
