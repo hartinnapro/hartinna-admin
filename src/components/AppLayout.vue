@@ -67,15 +67,20 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../lib/supabase'
+import { session } from '../lib/session'
 
 const route  = useRoute()
 const router = useRouter()
 
-const adminName = ref('')
-const adminRole = ref('')
 const pendingCount = ref(0)
 const supportCount = ref(0)
 
+// Admin info comes from the cached session store — no fetch needed here
+const adminName = computed(() => session.admin?.full_name || '')
+const adminRole = computed(() => {
+  const r = session.admin?.role
+  return r ? r.charAt(0).toUpperCase() + r.slice(1) + ' Admin' : ''
+})
 const adminInitial = computed(() => adminName.value ? adminName.value[0].toUpperCase() : 'A')
 
 async function signOut() {
@@ -84,34 +89,13 @@ async function signOut() {
 }
 
 onMounted(async () => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return
-
-  const { data: admin } = await supabase
-    .from('admins')
-    .select('full_name, role')
-    .eq('id', session.user.id)
-    .single()
-
-  if (admin) {
-    adminName.value = admin.full_name
-    adminRole.value = admin.role.charAt(0).toUpperCase() + admin.role.slice(1) + ' Admin'
-  }
-
-  // Pending order count for badge
-  const { count } = await supabase
-    .from('orders')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending_review')
-
-  pendingCount.value = count || 0
-
-  // Open support tickets badge
-  const { data: supportData } = await supabase
-    .from('support_tickets')
-    .select('id')
-    .eq('status', 'open')
-  supportCount.value = supportData?.length || 0
+  // Both badge counts fire in parallel instead of sequentially
+  const [ordersRes, supportRes] = await Promise.all([
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending_review'),
+    supabase.from('support_tickets').select('id').eq('status', 'open')
+  ])
+  pendingCount.value = ordersRes.count || 0
+  supportCount.value = supportRes.data?.length || 0
 })
 </script>
 

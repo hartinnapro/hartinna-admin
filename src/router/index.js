@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { supabase } from '../lib/supabase'
+import { loadSession } from '../lib/session'
 
 const routes = [
   {
@@ -29,28 +29,12 @@ const router = createRouter({
   routes
 })
 
-// Auth guard
+// Auth guard — admin is loaded once and cached in the session store
 router.beforeEach(async (to) => {
-  const { data: { session } } = await supabase.auth.getSession()
+  const s = await loadSession()
 
-  if (to.meta.requiresAdmin) {
-    if (!session) return '/login'
-    const { data: admin } = await supabase
-      .from('admins')
-      .select('id, role, full_name')
-      .eq('id', session.user.id)
-      .single()
-    if (!admin) return '/login'
-  }
-
-  if (to.meta.guest && session) {
-    const { data: admin } = await supabase
-      .from('admins')
-      .select('id')
-      .eq('id', session.user.id)
-      .single()
-    if (admin) return '/orders'
-  }
+  if (to.meta.requiresAdmin && !s.admin) return '/login'
+  if (to.meta.guest && s.admin) return '/orders'
 })
 
 export default router
