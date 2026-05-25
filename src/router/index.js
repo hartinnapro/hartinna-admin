@@ -29,9 +29,22 @@ const router = createRouter({
   routes
 })
 
-// Auth guard — admin is loaded once and cached in the session store
+// Auth guard — session is loaded once and cached in the session store.
+// loadSession() throws when the admins table query fails (e.g. Supabase
+// cold-start, network blip). In that case we redirect to /login rather
+// than letting the navigation hang. The promise is cleared on throw, so
+// the next navigation will retry the full session load automatically.
 router.beforeEach(async (to) => {
-  const s = await loadSession()
+  let s
+  try {
+    s = await loadSession()
+  } catch {
+    // Could not confirm admin identity — send to login.
+    // The cached promise was cleared by loadSession() on throw,
+    // so the next navigation will try again from scratch.
+    if (to.meta.guest) return true   // already heading to /login, let through
+    return '/login'
+  }
 
   if (to.meta.requiresAdmin && !s.admin) return '/login'
   if (to.meta.guest && s.admin) return '/orders'
