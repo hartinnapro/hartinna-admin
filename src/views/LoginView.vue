@@ -35,6 +35,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../lib/supabase'
+import { resetSession } from '../lib/session'
 
 const router   = useRouter()
 const email    = ref('')
@@ -69,6 +70,8 @@ async function login() {
       throw new Error('Access denied. This account does not have admin privileges.')
     }
 
+    // Clear stale session cache so the router guard fetches fresh state
+    resetSession()
     router.push('/orders')
   } catch (e) {
     error.value = e.message?.includes('Invalid login credentials')
