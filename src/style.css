@@ -46,6 +46,12 @@ body {
   line-height: 1.5;
 }
 
+/* html must match body background so iOS rubber-band overscroll
+   shows the same colour instead of the system white default */
+html {
+  background: var(--bg);
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
