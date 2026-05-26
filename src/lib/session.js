@@ -13,11 +13,29 @@ const state = reactive({
 let loadingPromise = null
 
 export async function loadSession() {
+  // ── Fast path ──────────────────────────────────────────────────────
+  // If we already have a confirmed admin in state, return immediately
+  // without touching the network. This makes every sidebar navigation
+  // instant after the initial login load, and prevents the router guard
+  // from ever blocking when the session is healthy.
+  if (state.ready && state.admin) return state
+
+  // If a load is already in progress, join it instead of starting another.
   if (loadingPromise) return loadingPromise
 
   loadingPromise = (async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      // getSession() can trigger an internal token refresh (network call).
+      // Auth endpoints are excluded from fetchWithTimeout, so without this
+      // race() guard the entire router guard could hang indefinitely when
+      // Supabase is slow — making the sidebar appear frozen.
+      const { data: { session } } = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('[session] getSession timed out')), 10_000)
+        )
+      ])
+
       state.session = session
 
       if (session) {
@@ -28,17 +46,14 @@ export async function loadSession() {
           .single()
 
         if (error) {
-          // The admins query failed (network hiccup, Supabase cold-start
-          // overrun, timeout, etc.). This does NOT mean the user is
-          // signed out — their Supabase session is still valid.
-          // Clear the promise so the next navigation retries from scratch
-          // instead of returning a cached null-admin state forever.
+          // Network/timeout error — not a genuine sign-out.
+          // Clear the promise so the next navigation retries from scratch.
           loadingPromise = null
           throw new Error(`[session] admin lookup failed: ${error.message}`)
         }
 
-        // admin is null when the signed-in Supabase user has no row in
-        // the admins table — genuine access-denied, not a network error.
+        // admin === null means the user exists in auth.users but has no
+        // row in the admins table — genuine access-denied, not a network error.
         state.admin = admin || null
       } else {
         state.admin = null
@@ -68,34 +83,27 @@ export function resetSession() {
 // ── Auth state listener ──────────────────────────────────────────────
 // Only react to genuine sign-outs.
 //
-// The SIGNED_IN handler was removed intentionally. When the user logs
-// in, LoginView calls router.push('/orders'), which fires the router
-// guard, which calls loadSession() — that is the correct and only code
-// path for re-hydrating the session after login. Having a second
-// concurrent loadSession() triggered by the SIGNED_IN event created a
-// race condition where the router guard could end up awaiting an
-// abandoned promise whose result had state.admin = null (left over from
-// a previous failed load), causing an immediate redirect back to /login
-// even after a successful sign-in.
+// The SIGNED_IN handler was removed intentionally — it created a race
+// condition where the router guard and the auth event both called
+// loadSession() concurrently, with the event handler's version
+// sometimes clobbering a valid loadingPromise mid-flight.
 //
-// Boot-up events (INITIAL_SESSION) are also ignored via the !state.ready
-// guard — the router guard's first loadSession() call handles those.
+// Boot-up INITIAL_SESSION events are ignored via the !state.ready guard.
 supabase.auth.onAuthStateChange((event) => {
   if (!state.ready) return   // ignore events fired before first load
 
   if (event === 'SIGNED_OUT') {
     resetSession()
   }
-  // TOKEN_REFRESHED: the access token changed but the admin row hasn't.
-  // Update state.session so the heartbeat ping uses the freshest token,
-  // but don't touch state.admin or loadingPromise.
+  // TOKEN_REFRESHED: access token rotated, admin row unchanged.
+  // Update state.session for freshness but leave everything else alone.
+  // No need to clear loadingPromise — fast path still returns immediately.
 })
 
 // ── Connection keep-alive ────────────────────────────────────────────
 // Android/Windows PWAs can lose underlying network sockets during idle
-// or backgrounding, causing subsequent Supabase queries to hang.
-// A lightweight periodic ping keeps the connection pool warm without
-// touching the auth state machine.
+// or backgrounding. A lightweight periodic ping keeps the connection
+// pool warm without touching the auth state machine.
 
 const HEARTBEAT_INTERVAL_MS = 4 * 60 * 1000  // 4 minutes
 
@@ -112,12 +120,12 @@ async function pingConnection() {
   }
 }
 
-// Heartbeat: every 4 minutes while the tab is visible.
+// Every 4 minutes while tab is visible.
 setInterval(() => {
   if (!document.hidden) pingConnection()
 }, HEARTBEAT_INTERVAL_MS)
 
-// Visibility resume: ping immediately when the user returns to the tab.
+// Ping immediately on tab resume so the first click after idle is fast.
 let wasHidden = false
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
