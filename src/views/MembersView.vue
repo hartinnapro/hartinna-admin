@@ -10,11 +10,11 @@
     <div class="filter-bar">
       <select id="filter-level" name="filterLevel" v-model="filterLevel" class="filter-select">
         <option value="">All Levels</option>
-        <option value="store_manager">Store Manager</option>
-        <option value="director">Director</option>
-        <option value="ceo">CEO</option>
-        <option value="branch">Branch</option>
-        <option value="exec_shareholder">Exec. Shareholder</option>
+        <option
+          v-for="cfg in levelConfigs"
+          :key="cfg.code"
+          :value="codeToDb[cfg.code] ?? cfg.code"
+        >{{ cfg.code }} · {{ cfg.label_en }}</option>
       </select>
       <select id="filter-region" name="filterRegion" v-model="filterRegion" class="filter-select">
         <option value="">All Regions</option>
@@ -61,7 +61,12 @@
               <span v-else style="color:var(--border);">—</span>
             </td>
             <td style="color:var(--text-muted);">{{ m.phone }}</td>
-            <td><span class="badge-level">{{ levelLabel(m.level) }}</span></td>
+            <td>
+              <span class="badge-level">
+                <span class="level-code">{{ dbToCode[m.level] || m.level }}</span>
+                <span class="level-name">{{ levelName(m.level) }}</span>
+              </span>
+            </td>
             <td style="color:var(--text-muted);">{{ m.region }}</td>
             <td style="color:var(--text-muted); font-size:12.5px;">{{ formatDate(m.created_at) }}</td>
             <td>
@@ -70,12 +75,13 @@
               </span>
             </td>
             <td @click.stop>
-              <select class="level-select" :id="`level-${m.id}`" :name="`level-${m.id}`" :value="m.level" @change="changeLevel(m, $event.target.value)">
-                <option value="store_manager">Store Manager</option>
-                <option value="director">Director</option>
-                <option value="ceo">CEO</option>
-                <option value="branch">Branch</option>
-                <option value="exec_shareholder">Exec. Shareholder</option>
+              <select class="level-select" :id="`level-${m.id}`" :name="`level-${m.id}`"
+                :value="m.level" @change="changeLevel(m, $event.target.value)">
+                <option
+                  v-for="cfg in levelConfigs"
+                  :key="cfg.code"
+                  :value="codeToDb[cfg.code] ?? cfg.code"
+                >{{ cfg.code }} · {{ cfg.label_en }}</option>
               </select>
             </td>
           </tr>
@@ -89,17 +95,42 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabase'
 
-const members     = ref([])
-const loading     = ref(true)
-const search      = ref('')
+const members      = ref([])
+const loading      = ref(true)
+const search       = ref('')
 const filterLevel  = ref('')
 const filterRegion = ref('')
 
-const LEVEL_LABELS = {
-  store_manager: 'Store Manager', director: 'Director',
-  ceo: 'CEO', branch: 'Branch', exec_shareholder: 'Exec. Shareholder'
+// ── Level config ─────────────────────────────────────────────────────
+// DB enum values are fixed by the schema. This mapping translates
+// them to the configurable short codes stored in partner_level_configs.
+const DB_TO_CODE = {
+  store_manager:    'BM',
+  director:         'MD',
+  ceo:              'CEO',
+  branch:           'BO',
+  exec_shareholder: 'MP'
 }
-function levelLabel(l)  { return LEVEL_LABELS[l] || l }
+
+const levelConfigs = ref([])   // from partner_level_configs, sorted sort_order DESC
+const levelsByCode = computed(() => {
+  const map = {}
+  levelConfigs.value.forEach(c => { map[c.code] = c })
+  return map
+})
+
+// Expose computed maps for template use
+const dbToCode  = computed(() => DB_TO_CODE)
+const codeToDb  = computed(() =>
+  Object.fromEntries(Object.entries(DB_TO_CODE).map(([k, v]) => [v, k]))
+)
+
+function levelName(dbKey) {
+  const code = DB_TO_CODE[dbKey]
+  if (!code) return dbKey
+  return levelsByCode.value[code]?.label_en ?? code
+}
+
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })
 }
@@ -112,24 +143,37 @@ const filtered = computed(() => {
   if (filterRegion.value) r = r.filter(m => m.region === filterRegion.value)
   if (search.value.trim()) {
     const q = search.value.toLowerCase()
-    r = r.filter(m => m.full_name?.toLowerCase().includes(q) || m.phone?.includes(q) || m.username?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q))
+    r = r.filter(m =>
+      m.full_name?.toLowerCase().includes(q) ||
+      m.phone?.includes(q) ||
+      m.username?.toLowerCase().includes(q) ||
+      m.email?.toLowerCase().includes(q)
+    )
   }
   return r
 })
 
 async function changeLevel(member, newLevel) {
   if (newLevel === member.level) return
-  if (!confirm(`Change ${member.full_name}'s level to ${levelLabel(newLevel)}?`)) return
+  const label = `${DB_TO_CODE[newLevel] ?? newLevel} · ${levelsByCode.value[DB_TO_CODE[newLevel]]?.label_en ?? newLevel}`
+  if (!confirm(`Change ${member.full_name}'s level to ${label}?`)) return
   const { error } = await supabase.from('members').update({ level: newLevel }).eq('id', member.id)
   if (error) { alert('Failed: ' + error.message); return }
   member.level = newLevel
 }
 
 onMounted(async () => {
-  const { data, error } = await supabase.rpc('get_members_with_email', {})
-  if (error) console.error('RPC error:', JSON.stringify(error))
-  const rows = (data || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-  // Resolve referrer names
+  // Load level configs and members in parallel
+  const [cfgRes, membersRes] = await Promise.all([
+    supabase.from('partner_level_configs').select('*').order('sort_order', { ascending: false }),
+    supabase.rpc('get_members_with_email', {})
+  ])
+
+  if (cfgRes.data) levelConfigs.value = cfgRes.data
+
+  if (membersRes.error) { console.error('RPC error:', JSON.stringify(membersRes.error)); loading.value = false; return }
+
+  const rows = (membersRes.data || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
   const referrerIds = [...new Set(rows.filter(m => m.referrer_id).map(m => m.referrer_id))]
   let referrerMap = {}
   if (referrerIds.length) {
@@ -147,13 +191,33 @@ onMounted(async () => {
 .page-title  { font-size: 22px; font-weight: 700; color: var(--text); }
 .page-sub    { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 
-.filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-bar    { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .filter-select { width: auto; padding: 7px 28px 7px 10px; font-size: 13px; }
 .filter-spacer { flex: 1; }
 .search-input  { width: 220px; padding: 7px 12px; font-size: 13px; }
 
-.table-card { overflow: hidden; }
+.table-card  { overflow: hidden; }
 .member-name { font-weight: 500; }
+
+/* Level badge — code pill + name text side by side */
+.badge-level {
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.level-code {
+  display: inline-block;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.level-name {
+  font-size: 12.5px;
+  color: var(--text);
+  white-space: nowrap;
+}
 
 .status-active   { background: var(--success-bg); color: var(--success); font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
 .status-inactive { background: #F2F3F4; color: #566573; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
