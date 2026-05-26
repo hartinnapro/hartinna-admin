@@ -21,6 +21,7 @@ const routes = [
       { path: 'products',         component: () => import('../views/ProductsView.vue') },
       { path: 'inventory',        component: () => import('../views/InventoryView.vue') },
       { path: 'support',          component: () => import('../views/SupportView.vue') },
+      { path: 'partner-levels',   component: () => import('../views/PartnerLevelsView.vue') },
     ]
   }
 ]
