@@ -90,6 +90,32 @@
               </tbody>
             </table>
           </div>
+          <!-- Current Cart -->
+          <div class="card section-card">
+            <div class="section-title">Current Cart
+              <span v-if="cart.length" style="font-size:12px; font-weight:400; color:var(--text-muted); margin-left:8px;">
+                {{ cart.length }} item{{ cart.length > 1 ? 's' : '' }} · RM {{ cartTotal.toFixed(2) }}
+              </span>
+            </div>
+            <div v-if="cartLoading" class="loading-center" style="padding:20px;">
+              <div class="spinner"></div>
+            </div>
+            <div v-else-if="cart.length === 0" style="font-size:13px; color:var(--text-muted);">Cart is empty.</div>
+            <table class="data-table" v-else>
+              <thead><tr><th>Product</th><th>Qty</th><th>Subtotal</th><th>Updated</th></tr></thead>
+              <tbody>
+                <tr v-for="item in cart" :key="item.product_id">
+                  <td>
+                    <div style="font-weight:500; font-size:13px;">{{ item.product_snapshot?.name || item.product_id }}</div>
+                    <div style="font-size:11.5px; color:var(--text-muted);">{{ item.product_snapshot?.sku }}</div>
+                  </td>
+                  <td>{{ item.qty }}</td>
+                  <td>RM {{ ((item.product_snapshot?.product_prices?.[0]?.price ?? 0) * item.qty).toFixed(2) }}</td>
+                  <td style="font-size:12px; color:var(--text-muted);">{{ formatDate(item.updated_at) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </template>
@@ -105,7 +131,9 @@ const route = useRoute()
 
 const member      = ref(null)
 const orders      = ref([])
+const cart        = ref([])
 const loading     = ref(true)
+const cartLoading = ref(true)
 const newLevel    = ref('')
 const savingLevel = ref(false)
 const levelSaved  = ref(false)
@@ -119,6 +147,10 @@ function formatDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })
 }
+
+const cartTotal = computed(() =>
+  cart.value.reduce((s, i) => s + (i.product_snapshot?.product_prices?.[0]?.price ?? 0) * i.qty, 0)
+)
 
 const stats = computed(() => {
   const total     = orders.value.filter(o => o.status !== 'cancelled').length
@@ -158,6 +190,16 @@ onMounted(async () => {
     .limit(10)
 
   orders.value = o || []
+
+  // Load cart
+  const { data: cartData } = await supabase
+    .from('cart_items')
+    .select('product_id, qty, updated_at, product_snapshot')
+    .eq('member_id', route.params.id)
+    .order('updated_at', { ascending: false })
+
+  cart.value = cartData || []
+  cartLoading.value = false
   loading.value = false
 })
 </script>
